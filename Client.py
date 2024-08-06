@@ -2,6 +2,13 @@ from tkinter import *
 from tkinter import messagebox, filedialog, Frame
 import rpyc
 
+def get_files():
+    conn = rpyc.connect('localhost', 12345)
+    call = conn.root.get_files()
+    result = list(call)
+    conn.close()
+    return result
+
 def send_archive():
     file_path = filedialog.askopenfilename()
     if file_path:
@@ -17,10 +24,9 @@ def send_archive():
             message=f'Devido a um erro, o arquivo não foi enviado.')
     conn.close()
 
-def download_archive():
-    file = filedialog.askopenfilename(title='Selecione o arquivo para download', initialdir='./files')
+def download_file(file):
     if file:
-        dest_dir = filedialog.askdirectory(title='Selecione o diretório de destino')
+        dest_dir = filedialog.askdirectory(title='Selecione o diretório de destino', initialdir='C:/')
         if dest_dir:
             conn = rpyc.connect('localhost', 12345)
             result = conn.root.download_file(file, dest_dir)
@@ -49,16 +55,28 @@ class Menu:
     # Remove os elementos do Menu principal e renderiza o menu selecionado
     def set_menu(self, menu):
         self.unshow_frame()
-        self.menu_frame = Frame(self.root)
+        self.menu_frame = Frame(self.root, padx=15, pady=15)
+        self.menu_frame.grid_rowconfigure(3, weight=1)
+        self.menu_frame.grid_columnconfigure(1, weight=1)
         self.menu_frame.grid()
         Button(self.menu_frame, text="Voltar", command=self.show_frame).grid(row=0, column=0)
         if menu == 'upload':
             Label(self.menu_frame, text="Selecione o arquivo:").grid(row=2, column=1)
             Button(self.menu_frame, text="Upload", width=26, command=send_archive).grid(row=2, column=2)
         elif menu == 'download':
-            Label(self.menu_frame, text="Selecione o arquivo:").grid(row=2, column=1)
-            Button(self.menu_frame, text="Procurar", width=26, command=download_archive).grid(row=2, column=2)
-    
+            grid_i = 1
+            files = get_files()
+            frame = Frame(self.menu_frame, padx=15, pady=15)
+            container = Frame(frame, padx=15, pady=15, borderwidth=2, relief='ridge')
+            for file in files:
+                Label(container, text=file, width=35).grid(row=grid_i, column=1)
+                Button(container, text='Download', width=15, command=lambda f=file: download_file(f)).grid(row=grid_i, column=2)
+                grid_i+=1
+            frame.grid(column=1)
+            container.grid(columnspan=2)
+        Entry(self.menu_frame).grid(row=3, column=1)
+        Button(self.menu_frame, text='Lista de Interesse' ).grid(row=3, column=3)
+
     # Renderiza o menu principal na tela
     def show_frame(self):
         self.menu_frame.destroy()
@@ -76,9 +94,9 @@ if __name__=='__main__':
     window = Tk()
     window.title("Arquivos")
     window.geometry("600x400")
-    window.config(padx=150, pady=150)
+    # window.config(padx=15, pady=15)
 
     # Inicializando a classe Menu com seu próprio frame
-    menu = Menu(Frame(window), root=window)
+    menu = Menu(Frame(window, padx=150, pady=150), root=window)
 
     window.mainloop()
