@@ -9,12 +9,19 @@ class MyService(rpyc.Service):
         print('Conexão encerrada')
     def exposed_add(self, x, y):
         return x + y
-    def exposed_sendFile(self, filePath):
+    def exposed_send_file(self, filePath):
         if filePath:
             if not os.path.exists('./files'):
                 os.makedirs('./files')
             dest_path = os.path.join('./files', os.path.basename(filePath))
             shutil.move(filePath, dest_path)
+            return True
+        else:
+            return False
+    def exposed_download_file(self, file, dest_path):
+        if file and dest_path:
+            final_path = os.path.join(dest_path, os.path.basename(file))
+            shutil.copy(file, final_path)
             return True
         else:
             return False

@@ -6,7 +6,7 @@ def send_archive():
     file_path = filedialog.askopenfilename()
     if file_path:
         conn = rpyc.connect("localhost", 12345)
-        result = conn.root.sendFile(file_path)
+        result = conn.root.send_file(file_path)
         if result:
             messagebox.showinfo(
             title="Sucesso",
@@ -15,6 +15,23 @@ def send_archive():
             messagebox.showinfo(
             title="Falha",
             message=f'Devido a um erro, o arquivo não foi enviado.')
+    conn.close()
+
+def download_archive():
+    file = filedialog.askopenfilename(title='Selecione o arquivo para download', initialdir='./files')
+    if file:
+        dest_dir = filedialog.askdirectory(title='Selecione o diretório de destino')
+        if dest_dir:
+            conn = rpyc.connect('localhost', 12345)
+            result = conn.root.download_file(file, dest_dir)
+            if result:
+                messagebox.showinfo(
+                title="Sucesso",
+                message=f'Download efetuado com sucesso.')
+        else:
+            messagebox.showinfo(
+            title="Falha",
+            message=f'Devido a um erro, o download não foi concluído.')
     conn.close()
 
 
@@ -26,7 +43,7 @@ class Menu:
         self.back_button = Button(self.menu_frame, text="Voltar", command=self.show_frame)
         self.uploadMenuButton = Button(frame, text="Upload de arquivo", width=36, command=lambda: self.set_menu('upload'))
         self.searchFileButton = Button(frame, text="Buscar arquivo", width=36, command=self.set_menu)
-        self.downloadFileButton = Button(frame, text="Download de arquivo", width=36, command=self.set_menu)
+        self.downloadFileButton = Button(frame, text="Download de arquivo", width=36, command=lambda: self.set_menu('download'))
         self.show_frame()
 
     # Remove os elementos do Menu principal e renderiza o menu selecionado
@@ -38,6 +55,9 @@ class Menu:
         if menu == 'upload':
             Label(self.menu_frame, text="Selecione o arquivo:").grid(row=2, column=1)
             Button(self.menu_frame, text="Upload", width=26, command=send_archive).grid(row=2, column=2)
+        elif menu == 'download':
+            Label(self.menu_frame, text="Selecione o arquivo:").grid(row=2, column=1)
+            Button(self.menu_frame, text="Procurar", width=26, command=download_archive).grid(row=2, column=2)
     
     # Renderiza o menu principal na tela
     def show_frame(self):
