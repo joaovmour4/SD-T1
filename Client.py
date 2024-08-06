@@ -1,5 +1,5 @@
 from tkinter import *
-from tkinter import messagebox, filedialog
+from tkinter import messagebox, filedialog, Frame
 import rpyc
 
 def send_archive():
@@ -17,32 +17,39 @@ def send_archive():
             message=f'Devido a um erro, o arquivo não foi enviado.')
     conn.close()
 
-def remove(widgets):
-    for widget in widgets:
-        widget.grid_remove()
 
-def add(widgets):
-    for i in range(len(widgets)):
-        widgets[i].grid(row=2, column=i)
+class Menu:
+    on_frame = False
+    def __init__(self, frame, root):
+        self.root = root
+        self.frame = frame
+        self.menu_frame = Frame(self.root)
+        self.back_button = Button(self.menu_frame, text="Voltar", command=self.show_frame)
+        self.uploadMenuButton = Button(frame, text="Upload de arquivo", width=36, command=lambda: self.set_menu('upload'))
+        self.searchFileButton = Button(frame, text="Buscar arquivo", width=36, command=self.set_menu)
+        self.downloadFileButton = Button(frame, text="Download de arquivo", width=36, command=self.set_menu)
+        self.show_frame()
 
-def setMenu(menu):
-    if menu == 'upload':
-        add(upload_widgets)
-        for menuButton in menus:
-            menuButton.grid_remove()
-
-
-def main_menu():
-    uploadMenuButton = Button(text="Upload de arquivo", width=36, command=lambda: setMenu('upload'))
-    uploadMenuButton.grid(row=2, column=0)
-    searchFileButton = Button(text="Buscar arquivo", width=36, command=setMenu)
-    searchFileButton.grid(row=3, column=0)
-    downloadFileButton = Button(text="Download de arquivo", width=36, command=setMenu)
-    downloadFileButton.grid(row=4, column=0)
-    return [uploadMenuButton, searchFileButton, downloadFileButton]
-
-
-
+    def set_menu(self, menu):
+        self.unshow_frame()
+        self.menu_frame = Frame(self.root)
+        self.menu_frame.grid()
+        Button(self.menu_frame, text="Voltar", command=self.show_frame).grid(row=0, column=0)
+        if menu == 'upload':
+            Label(self.menu_frame, text="Selecione o arquivo:").grid(row=2, column=1)
+            Button(self.menu_frame, text="Upload", width=26, command=send_archive).grid(row=2, column=2)
+    
+    def show_frame(self):
+        self.on_frame = True
+        self.menu_frame.destroy()
+        self.frame.grid()
+        self.uploadMenuButton.grid(row=2, column=0)
+        self.searchFileButton.grid(row=3, column=0)
+        self.downloadFileButton.grid(row=4, column=0)
+    
+    def unshow_frame(self):
+        self.on_frame = False
+        self.frame.grid_forget()
 
 if __name__=='__main__':
     window = Tk()
@@ -50,12 +57,9 @@ if __name__=='__main__':
     window.geometry("600x400")
     window.config(padx=150, pady=150)
 
-    menus = main_menu()
+    menu = Menu(Frame(window), root=window)
+
 
     # Labels
-    x_label = Label(text="Selecione o arquivo:")
-    add_button = Button(text="Upload", width=36, command=send_archive)
-
-    upload_widgets = [x_label, add_button]
 
     window.mainloop()
