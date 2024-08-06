@@ -19,7 +19,6 @@ def send_archive():
 
 
 class Menu:
-    on_frame = False
     def __init__(self, frame, root):
         self.root = root
         self.frame = frame
@@ -30,6 +29,7 @@ class Menu:
         self.downloadFileButton = Button(frame, text="Download de arquivo", width=36, command=self.set_menu)
         self.show_frame()
 
+    # Remove os elementos do Menu principal e renderiza o menu selecionado
     def set_menu(self, menu):
         self.unshow_frame()
         self.menu_frame = Frame(self.root)
@@ -39,27 +39,26 @@ class Menu:
             Label(self.menu_frame, text="Selecione o arquivo:").grid(row=2, column=1)
             Button(self.menu_frame, text="Upload", width=26, command=send_archive).grid(row=2, column=2)
     
+    # Renderiza o menu principal na tela
     def show_frame(self):
-        self.on_frame = True
         self.menu_frame.destroy()
         self.frame.grid()
         self.uploadMenuButton.grid(row=2, column=0)
         self.searchFileButton.grid(row=3, column=0)
         self.downloadFileButton.grid(row=4, column=0)
     
+    # Remove os elementos de menu da tela
     def unshow_frame(self):
-        self.on_frame = False
         self.frame.grid_forget()
 
 if __name__=='__main__':
+    # Configs do tela principal Tkinter (Frame Root)
     window = Tk()
     window.title("Arquivos")
     window.geometry("600x400")
     window.config(padx=150, pady=150)
 
+    # Inicializando a classe Menu com seu próprio frame
     menu = Menu(Frame(window), root=window)
-
-
-    # Labels
 
     window.mainloop()
