@@ -1,5 +1,5 @@
 from tkinter import *
-from tkinter import messagebox, filedialog, Frame
+from tkinter import messagebox, filedialog, Frame, Entry
 import rpyc
 
 def get_files():
@@ -74,8 +74,7 @@ class Menu:
                 grid_i+=1
             frame.grid(column=1)
             container.grid(columnspan=2)
-        Entry(self.menu_frame).grid(row=3, column=1)
-        Button(self.menu_frame, text='Lista de Interesse' ).grid(row=3, column=3)
+            Button(frame, text='Lista de Interesse', command=lambda: InterestList(self.root)).grid(row=grid_i, column=1, sticky='e')
 
     # Renderiza o menu principal na tela
     def show_frame(self):
@@ -89,12 +88,58 @@ class Menu:
     def unshow_frame(self):
         self.frame.grid_forget()
 
+class InterestList:
+    def __init__(self, root):
+        self.interest_list = []
+        self.root = root
+        self.window = Toplevel(master=root)
+        self.window.title('Tabela de Interesses')
+        self.fill_fields()
+    
+    def remove(self, file):
+        self.interest_list.remove(file)
+    
+    def add(self, file, container):
+        container.destroy()
+        conn = rpyc.connect("localhost", 12345)
+        result = conn.root.insert_interest_list(file)
+        if not result:
+            messagebox.showinfo(
+                title="Lista de Interesses",
+                message=f'O arquivo foi inserido na lista de interesses com sucesso.')
+        else:
+            messagebox.showinfo(
+                title="Arquivo encontrado.",
+                message=f'O arquivo solicitado foi encontrado nos registros: {result}.')
+        conn.close()
+        self.fill_fields()
+    
+    def fill_fields(self):
+        conn = rpyc.connect("localhost", 12345)
+        result = conn.root.get_interest_list()
+        self.interest_list = list(result)
+        frame = Frame(self.window, padx=15, pady=15)
+        container = Frame(frame, padx=15, pady=15, borderwidth=2, relief='ridge')
+        frame.grid()
+        container.grid(columnspan=2)
+        if self.interest_list:
+            for index, file in enumerate(self.interest_list):
+                Label(container, text=file, width=35).grid(row=index, column=0)
+                Button(container, text='Remover', width=15, command=lambda f=file: self.remove(f)).grid(row=index, column=1)
+        else:
+            Label(container, text='Não há arquivos na lista de interesse.').grid()
+        grid_size = frame.grid_size()
+        interest_entry = Entry(frame)
+        interest_entry.grid(row=grid_size[1], column=0, sticky='w')
+        add_button = Button(frame, text='Adicionar', command= lambda: self.add(interest_entry.get(), frame))
+        add_button.grid(row=grid_size[1], column=1, sticky='e')
+
+
 if __name__=='__main__':
     # Configs do tela principal Tkinter (Frame Root)
     window = Tk()
     window.title("Arquivos")
     window.geometry("600x400")
-    # window.config(padx=15, pady=15)
 
     # Inicializando a classe Menu com seu próprio frame
     menu = Menu(Frame(window, padx=150, pady=150), root=window)

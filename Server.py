@@ -12,10 +12,13 @@ class MyService(rpyc.Service):
     def exposed_send_file(self, filePath):
         if filePath:
             dest_path = os.path.join('./files', os.path.basename(filePath))
-            shutil.move(filePath, dest_path)
+            shutil.copy(filePath, dest_path)
+            if os.path.basename(filePath) in interest_list:
+                print('Novo registro da lista de interesses adicionado.')
             return True
         else:
             return False
+        
     def exposed_get_files(self):
         files = os.listdir('./files/')
         return files
@@ -29,14 +32,16 @@ class MyService(rpyc.Service):
         else:
             return False
     
-    def insert_interest_list(file_name):
-        if file_name:
-            search = glob.glob(os.path.join('./files', f'*{file_name}*'))
-            if not search:
-                interest_list.append(file_name)
-                return False
-            else:
-                return search
+    def exposed_insert_interest_list(self, file_name):
+        files = os.listdir('./files/')
+        if file_name not in files:
+            interest_list.append(file_name)
+            return False
+        else:
+            return file_name
+    
+    def exposed_get_interest_list(self):
+        return interest_list
         
 
 if __name__ == '__main__':
