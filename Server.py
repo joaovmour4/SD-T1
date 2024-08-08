@@ -1,4 +1,6 @@
 import rpyc
+import time
+import threading
 from rpyc.utils.server import ThreadPoolServer
 import shutil, os
 import glob
@@ -14,10 +16,18 @@ class MyService(rpyc.Service):
             dest_path = os.path.join('./files', os.path.basename(filePath))
             shutil.copy(filePath, dest_path)
             if os.path.basename(filePath) in interest_list:
-                print('Novo registro da lista de interesses adicionado.')
+                self.notify_client(os.path.basename(filePath))
             return True
         else:
             return False
+    
+    def notify_client(self, file):
+        def notify(file):
+            time.sleep(3)
+            conn = rpyc.connect('localhost', 12346)
+            conn.root.notify_file(file)
+            conn.close()
+        threading.Thread(target=notify, args=(file,)).start()
         
     def exposed_get_files(self):
         files = os.listdir('./files/')
@@ -41,14 +51,14 @@ class MyService(rpyc.Service):
             return file_name
     
     def exposed_get_interest_list(self):
-        return interest_list
+        return interest_list.keys()
         
 
 if __name__ == '__main__':
     if not os.path.exists('./files'):
         os.makedirs('./files')
     port = 12345
-    interest_list = []
+    interest_list = {}
     server = ThreadPoolServer(MyService, port=port)
     print(f'Server listening on port {port}')
     server.start()
