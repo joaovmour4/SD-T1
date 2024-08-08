@@ -1,6 +1,25 @@
 from tkinter import *
 from tkinter import messagebox, filedialog, Frame, Entry
 import rpyc
+import threading
+from rpyc import ThreadedServer
+
+class MyService(rpyc.Service):
+    def on_connect(self, conn):
+        print('Conexão estabelecida')
+    def on_disconnect(self, conn):
+        print('Conexão encerrada')
+    def exposed_notify_file(self, file):
+        threading.Thread(target=InterestList.notify_client, args=(file,)).start()
+        return True
+
+def start_rpyc_server():
+    def run_server():
+        server = ThreadedServer(MyService, port=12346)
+        server.start()
+    
+    threading.Thread(target=run_server, daemon=True).start()
+    
 
 def get_files():
     conn = rpyc.connect('localhost', 12345)
@@ -16,12 +35,14 @@ def send_archive():
         result = conn.root.send_file(file_path)
         if result:
             messagebox.showinfo(
-            title="Sucesso",
-            message=f'O arquivo foi enviado com sucesso.')
+                title="Sucesso",
+                message=f'O arquivo foi enviado com sucesso.'
+            )
         else:
             messagebox.showinfo(
-            title="Falha",
-            message=f'Devido a um erro, o arquivo não foi enviado.')
+                title="Falha",
+                message=f'Devido a um erro, o arquivo não foi enviado.'
+            )
     conn.close()
 
 def download_file(file):
@@ -95,6 +116,13 @@ class InterestList:
         self.window = Toplevel(master=root)
         self.window.title('Tabela de Interesses')
         self.fill_fields()
+
+    @staticmethod
+    def notify_client(file):
+        messagebox.showinfo(
+            title='Novo Arquivo.',
+            message=f'O arquivo ${file} da sua lista de interesses foi adicionado à base de dados'
+        )
     
     def remove(self, file):
         self.interest_list.remove(file)
@@ -133,9 +161,12 @@ class InterestList:
         interest_entry.grid(row=grid_size[1], column=0, sticky='w')
         add_button = Button(frame, text='Adicionar', command= lambda: self.add(interest_entry.get(), frame))
         add_button.grid(row=grid_size[1], column=1, sticky='e')
+    
+
 
 
 if __name__=='__main__':
+    start_rpyc_server()
     # Configs do tela principal Tkinter (Frame Root)
     window = Tk()
     window.title("Arquivos")
