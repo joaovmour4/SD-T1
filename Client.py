@@ -10,7 +10,7 @@ class MyService(rpyc.Service):
     def on_disconnect(self, conn):
         print('Conexão encerrada')
     def exposed_notify_file(self, file):
-        threading.Thread(target=InterestList.notify_client, args=(file,)).start()
+        threading.Thread(target=InterestList.notify_client, args=(file,), daemon=True).start()
         return True
 
 def start_rpyc_server():
@@ -89,13 +89,16 @@ class Menu:
             files = get_files()
             frame = Frame(self.menu_frame, padx=15, pady=15)
             container = Frame(frame, padx=15, pady=15, borderwidth=2, relief='ridge')
-            for file in files:
-                Label(container, text=file, width=35).grid(row=grid_i, column=1)
-                Button(container, text='Download', width=15, command=lambda f=file: download_file(f)).grid(row=grid_i, column=2)
-                grid_i+=1
+            if files:
+                for file in files:
+                    Label(container, text=file, width=35).grid(row=grid_i, column=1)
+                    Button(container, text='Download', width=15, command=lambda f=file: download_file(f)).grid(row=grid_i, column=2)
+                    grid_i+=1
+            else:
+                Label(container, text='Não há arquivos na base de dados.').grid()
             frame.grid(column=1)
             container.grid(columnspan=2)
-            Button(frame, text='Lista de Interesse', command=lambda: InterestList(self.root)).grid(row=grid_i, column=1, sticky='e')
+            Button(frame, text='Lista de Interesses', command=lambda: InterestList(self.root)).grid(row=grid_i, column=1, sticky='e')
 
     # Renderiza o menu principal na tela
     def show_frame(self):
@@ -127,10 +130,10 @@ class InterestList:
     def remove(self, file):
         self.interest_list.remove(file)
     
-    def add(self, file, container):
+    def add(self, file, expiration_in_seconds, container):
         container.destroy()
         conn = rpyc.connect("localhost", 12345)
-        result = conn.root.insert_interest_list(file)
+        result = conn.root.insert_interest_list(file, expiration_in_seconds)
         if not result:
             messagebox.showinfo(
                 title="Lista de Interesses",
@@ -149,18 +152,22 @@ class InterestList:
         frame = Frame(self.window, padx=15, pady=15)
         container = Frame(frame, padx=15, pady=15, borderwidth=2, relief='ridge')
         frame.grid()
-        container.grid(columnspan=2)
+        container.grid(columnspan=3)
         if self.interest_list:
             for index, file in enumerate(self.interest_list):
                 Label(container, text=file, width=35).grid(row=index, column=0)
                 Button(container, text='Remover', width=15, command=lambda f=file: self.remove(f)).grid(row=index, column=1)
         else:
-            Label(container, text='Não há arquivos na lista de interesse.').grid()
+            Label(container, text='Não há arquivos na lista de interesses.').grid()
         grid_size = frame.grid_size()
+        Label(frame, text='Nome do arquivo').grid(row=grid_size[1], column=0, sticky='w')
+        Label(frame, text='Expiração em segundos').grid(row=grid_size[1]+1, column=0, sticky='w')
         interest_entry = Entry(frame)
-        interest_entry.grid(row=grid_size[1], column=0, sticky='w')
-        add_button = Button(frame, text='Adicionar', command= lambda: self.add(interest_entry.get(), frame))
-        add_button.grid(row=grid_size[1], column=1, sticky='e')
+        expiration_time = Entry(frame)
+        interest_entry.grid(row=grid_size[1], column=1, sticky='w')
+        expiration_time.grid(row=grid_size[1]+1, column=1, sticky='w')
+        add_button = Button(frame, text='Adicionar', command= lambda: self.add(interest_entry.get(), int(expiration_time.get()), frame))
+        add_button.grid(row=grid_size[1], rowspan=2, column=2, sticky='e')
     
 
 

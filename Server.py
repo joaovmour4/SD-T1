@@ -1,11 +1,14 @@
 import rpyc
-import time
+import time, datetime
 import threading
 from rpyc.utils.server import ThreadPoolServer
 import shutil, os
 import glob
 
 class MyService(rpyc.Service):
+    def __init__(self):
+        self.start_expiration_checker()
+
     def on_connect(self, conn):
         print('Conexão estabelecida')
     def on_disconnect(self, conn):
@@ -15,7 +18,7 @@ class MyService(rpyc.Service):
         if filePath:
             dest_path = os.path.join('./files', os.path.basename(filePath))
             shutil.copy(filePath, dest_path)
-            if os.path.basename(filePath) in interest_list:
+            if os.path.basename(filePath) in interest_list.keys():
                 self.notify_client(os.path.basename(filePath))
             return True
         else:
@@ -27,7 +30,8 @@ class MyService(rpyc.Service):
             conn = rpyc.connect('localhost', 12346)
             conn.root.notify_file(file)
             conn.close()
-        threading.Thread(target=notify, args=(file,)).start()
+            del interest_list[file]
+        threading.Thread(target=notify, args=(file,), daemon=True).start()
         
     def exposed_get_files(self):
         files = os.listdir('./files/')
@@ -42,16 +46,30 @@ class MyService(rpyc.Service):
         else:
             return False
     
-    def exposed_insert_interest_list(self, file_name):
+    def exposed_insert_interest_list(self, file_name, duration_in_seconds):
+        expiration_time = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=duration_in_seconds)
         files = os.listdir('./files/')
         if file_name not in files:
-            interest_list.append(file_name)
+            interest_list[file_name] = expiration_time
             return False
         else:
             return file_name
     
     def exposed_get_interest_list(self):
         return interest_list.keys()
+    
+    def check_expired_interests(self):
+        while True:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            expired_keys = [file for file, exp_time in interest_list.items() if exp_time <= now]
+            for file in expired_keys:
+                del interest_list[file]
+                print(f"Interesse '{file}' removido após expiração.")
+            # Verifica a cada 10 segundos
+            time.sleep(10)
+    
+    def start_expiration_checker(self):
+        threading.Thread(target=self.check_expired_interests, daemon=True).start()
         
 
 if __name__ == '__main__':
