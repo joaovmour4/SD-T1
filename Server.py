@@ -68,6 +68,13 @@ class MyService(rpyc.Service):
         else:            #  arquivo não constar na base de dados
             return file_name
     
+    # Método exposto para remover registros da lista de interesses
+    def exposed_remove_interest_list(self, file_name):
+        if file_name in interest_list:
+            del interest_list[file_name]
+            return True
+        return False
+    
     # Método exposto que retorna os registros na lista de interesses
     def exposed_get_interest_list(self):
         return interest_list.keys()

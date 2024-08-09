@@ -13,14 +13,16 @@ class MyService(rpyc.Service):
         threading.Thread(target=InterestList.notify_client, args=(file,), daemon=True).start()
         return True
 
+# Função que inicializa o server RPyC para recepção de notificações de arquivos
 def start_rpyc_server():
     def run_server():
         server = ThreadedServer(MyService, port=12346)
         server.start()
-    
+    # Atribui o servidor a uma Thread para não travar a interface gráfica
     threading.Thread(target=run_server, daemon=True).start()
     
 
+# Função que consome o procedimento remoto de buscar todos os arquivos
 def get_files():
     conn = rpyc.connect('localhost', 12345)
     call = conn.root.get_files()
@@ -28,6 +30,7 @@ def get_files():
     conn.close()
     return result
 
+# Função que consome o procedimento remoto de upload de arquivos
 def send_archive():
     file_path = filedialog.askopenfilename()
     if file_path:
@@ -45,6 +48,7 @@ def send_archive():
             )
     conn.close()
 
+# Função que consome o procedimento remoto de download de arquivos
 def download_file(file):
     if file:
         dest_dir = filedialog.askdirectory(title='Selecione o diretório de destino', initialdir='C:/')
@@ -63,6 +67,7 @@ def download_file(file):
 
 
 class Menu:
+    # Inicializa o menu com as 3 opções disponíveis
     def __init__(self, frame, root):
         self.root = root
         self.frame = frame
@@ -81,16 +86,17 @@ class Menu:
         self.menu_frame.grid_columnconfigure(1, weight=1)
         self.menu_frame.grid()
         Button(self.menu_frame, text="Voltar", command=self.show_frame).grid(row=0, column=0)
+        # Configura diferentes menus a depender da opção escolhida no menu principal
         if menu == 'upload':
             Label(self.menu_frame, text="Selecione o arquivo:").grid(row=2, column=1)
             Button(self.menu_frame, text="Upload", width=26, command=send_archive).grid(row=2, column=2)
         elif menu == 'download':
             grid_i = 1
-            files = get_files()
+            files = get_files() # Busca os arquivos do servidor remoto
             frame = Frame(self.menu_frame, padx=15, pady=15)
             container = Frame(frame, padx=15, pady=15, borderwidth=2, relief='ridge')
             if files:
-                for file in files:
+                for file in files: # Renderiza todos os arquivos e botões de download na tela
                     Label(container, text=file, width=35).grid(row=grid_i, column=1)
                     Button(container, text='Download', width=15, command=lambda f=file: download_file(f)).grid(row=grid_i, column=2)
                     grid_i+=1
@@ -116,20 +122,33 @@ class InterestList:
     def __init__(self, root):
         self.interest_list = []
         self.root = root
-        self.window = Toplevel(master=root)
+        self.window = Toplevel(master=root) # Inicia outra janela para a lista de interesses
         self.window.title('Tabela de Interesses')
-        self.fill_fields()
+        self.fill_fields() # Preenche a janela
 
     @staticmethod
-    def notify_client(file):
-        messagebox.showinfo(
+    def notify_client(file): # Método que notifica o cliente quando o servidor consome 
+        messagebox.showinfo( #  a função exposta de notificação
             title='Novo Arquivo.',
             message=f'O arquivo ${file} da sua lista de interesses foi adicionado à base de dados'
         )
     
+    # Remove registros da lista de interesses remota
     def remove(self, file):
-        self.interest_list.remove(file)
+        conn = rpyc.connect("localhost", 12345)
+        result = conn.root.remove_interest_list(file)
+        if not result:
+            messagebox.showinfo(
+                title="Lista de Interesses",
+                message=f'O arquivo não existe na lista de interesses.'
+            )
+        else:
+            messagebox.showinfo(
+                title="Lista de Interesses.",
+                message=f'O registro `{file}` foi removido da lista de interesses.'
+            )
     
+    # Adiciona registro na lista de interesses remota
     def add(self, file, expiration_in_seconds, container):
         container.destroy()
         conn = rpyc.connect("localhost", 12345)
