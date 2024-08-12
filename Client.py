@@ -30,6 +30,14 @@ def get_files():
     conn.close()
     return result
 
+# Função que consome o procedimento remoto de buscar todos os arquivos com informações
+def get_info_files():
+    conn = rpyc.connect('localhost', 12345)
+    call = conn.root.get_info_files()
+    result = list(call)
+    conn.close()
+    return result
+
 # Função que consome o procedimento remoto de upload de arquivos
 def send_archive():
     file_path = filedialog.askopenfilename()
@@ -74,8 +82,7 @@ class Menu:
         self.menu_frame = Frame(self.root)
         self.back_button = Button(self.menu_frame, text="Voltar", command=self.show_frame)
         self.uploadMenuButton = Button(frame, text="Upload de arquivo", width=36, command=lambda: self.set_menu('upload'))
-        self.searchFileButton = Button(frame, text="Buscar arquivo", width=36, command=self.set_menu)
-        self.downloadFileButton = Button(frame, text="Download de arquivo", width=36, command=lambda: self.set_menu('download'))
+        self.downloadFileButton = Button(frame, text="Arquivos", width=36, command=lambda: self.set_menu('download'))
         self.show_frame()
 
     # Remove os elementos do Menu principal e renderiza o menu selecionado
@@ -92,13 +99,17 @@ class Menu:
             Button(self.menu_frame, text="Upload", width=26, command=send_archive).grid(row=2, column=2)
         elif menu == 'download':
             grid_i = 1
-            files = get_files() # Busca os arquivos do servidor remoto
+            files = get_info_files() # Busca os arquivos do servidor remoto
             frame = Frame(self.menu_frame, padx=15, pady=15)
             container = Frame(frame, padx=15, pady=15, borderwidth=2, relief='ridge')
-            if files:
-                for file in files: # Renderiza todos os arquivos e botões de download na tela
+            if files: # Verifica se há arquivos nos registros
+                Label(container, text='Nome').grid(row=0, column=1) # Cabeçalho
+                Label(container, text='Tamanho').grid(row=0, column=2) # Cabeçalho
+                Label(container, text='Ações').grid(row=0, column=3) # Cabeçalho
+                for file, size in files: # Renderiza todos os arquivos e botões de download na tela
                     Label(container, text=file, width=35).grid(row=grid_i, column=1)
-                    Button(container, text='Download', width=15, command=lambda f=file: download_file(f)).grid(row=grid_i, column=2)
+                    Label(container, text=f'{size if size/1024 < 1 else round(size/1024, 2)} {"B" if size/1024 < 1 else "KB"}').grid(row=grid_i, column=2) # informa o tamanho do arquivo em Byte ou KBytes e caso seja menor que um KByte usa o sufixo KB
+                    Button(container, text='Download', width=15, command=lambda f=file: download_file(f)).grid(row=grid_i, column=3)
                     grid_i+=1
             else:
                 Label(container, text='Não há arquivos na base de dados.').grid()
@@ -111,8 +122,7 @@ class Menu:
         self.menu_frame.destroy()
         self.frame.grid()
         self.uploadMenuButton.grid(row=2, column=0)
-        self.searchFileButton.grid(row=3, column=0)
-        self.downloadFileButton.grid(row=4, column=0)
+        self.downloadFileButton.grid(row=3, column=0)
     
     # Remove os elementos de menu da tela
     def unshow_frame(self):

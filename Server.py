@@ -3,6 +3,8 @@ import time, datetime
 import threading
 from rpyc.utils.server import ThreadPoolServer
 import shutil, os
+from glob import glob
+from pathlib import Path
 
 class MyService(rpyc.Service):
     def __init__(self):
@@ -45,6 +47,16 @@ class MyService(rpyc.Service):
     # Método exposto pelo RPyC que retorna todos os arquivos na base de dados
     def exposed_get_files(self): 
         files = os.listdir('./files/')
+        return files
+    
+    # Método exposto que busca e retorna todos os arquivos na base de dados com suas características como tamanho
+    def exposed_get_info_files(self):
+        dir = Path('./files')
+        files = []
+        for file in dir.glob('*'):
+            if file.is_file():
+                files.append((os.path.basename(file), file.stat().st_size,))
+                # Adiciona a lista 'files' uma tupla contendo o nome do arquivo e seu tamanho
         return files
 
     # Método exposto para realizar o download dos arquivos
